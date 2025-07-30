@@ -71,25 +71,45 @@
             color: #e0e0ff;
             text-decoration: underline;
         }
+
+        .flash-message {
+            margin-top: 15px;
+            background-color: rgba(255, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
     <div class="register-container">
         <h2>Register</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         <form method="POST">
-             {{ form.hidden_tag() }}
+            {{ form.hidden_tag() }}
 
-    <label for="email">{{ form.email.label }}</label>
-    {{ form.email(size=30, id="email") }}
+            <label for="email">{{ form.email.label }}</label>
+            {{ form.email(size=30, id="email") }}
 
-    <label for="password">{{ form.password.label }}</label>
-    {{ form.password(size=30, id="password") }}
+            <label for="password">{{ form.password.label }}</label>
+            {{ form.password(size=30, id="password") }}
 
-    <label for="confirm_password">{{ form.confirm_password.label }}</label>
-    {{ form.confirm_password(size=30, id="confirm_password") }}
+            <label for="confirm_password">{{ form.confirm_password.label }}</label>
+            {{ form.confirm_password(size=30, id="confirm_password") }}
 
-    {{ form.submit() }}
+            {{ form.submit() }}
         </form>
+
         <p>Already registered? <a href="{{ url_for('login') }}">Login here</a></p>
     </div>
 </body>
