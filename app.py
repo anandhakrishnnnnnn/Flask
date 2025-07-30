@@ -8,7 +8,6 @@ from flask_mail import Mail, Message
 from flask_wtf.csrf import CSRFProtect
 import random
 import os
-import smtplib
 
 
 app = Flask(__name__)
