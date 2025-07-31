@@ -7,11 +7,11 @@ from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message
 from flask_wtf.csrf import CSRFProtect
 import random
-import os
+from wtforms.validators import DataRequired, Email
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = 'faslkjfhas'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
@@ -34,9 +34,18 @@ class User(db.Model):
     is_verified = db.Column(db.Boolean, default=False)
 
 class RegisterForm(FlaskForm):
-    email = StringField('Email', validators=[InputRequired(), Email()])
-    password = PasswordField('Password', validators=[InputRequired(), Length(min=6)])
-    confirm_password = PasswordField('Confirm Password', validators=[InputRequired(), EqualTo('password')])
+    email = StringField('Email', validators=[
+        DataRequired(message="Email is required."),
+        Email(message="Enter a valid email address.")
+    ])
+    password = PasswordField('Password', validators=[
+        DataRequired(message="Password is required."),
+        Length(min=6, message="Password must be at least 6 characters long.")
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(message="Please confirm your password."),
+        EqualTo('password', message="Passwords must match.")
+    ])
     submit = SubmitField('Register')
 
 class OTPForm(FlaskForm):
@@ -44,10 +53,9 @@ class OTPForm(FlaskForm):
     submit = SubmitField('Verify')
 
 class LoginForm(FlaskForm):
-    email = StringField('Email', validators=[InputRequired(), Email()])
-    password = PasswordField('Password', validators=[InputRequired()])
+    email = StringField('Email', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
-    
     
 def generate_otp():
     return str(random.randint(100000, 999999))
@@ -55,8 +63,8 @@ def generate_otp():
 def send_otp(email, otp):
     try:
         msg = Message('Your OTP Code',
-                      sender=app.config['MAIL_USERNAME'],
-                      recipients=[email])
+         sender=app.config['MAIL_USERNAME'],
+         recipients=[email])
         msg.body = f"Your OTP is: {otp}"
         mail.send(msg)
         print("OTP email sent to", email)
@@ -70,29 +78,33 @@ def send_otp(email, otp):
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        email = form.email.data
+        password = form.password.data
+
+        existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash("Email already registered!", "danger")
-            return redirect(url_for('register'))
+            flash('Email already exists. Please login.', 'warning')
+            return redirect(url_for('login'))
 
-        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        otp = generate_otp()
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-        new_user = User(email=form.email.data, password=hashed_password, is_verified=False)
+        new_user = User(email=email, password=hashed_password, is_verified=False)
         db.session.add(new_user)
         db.session.commit()
 
-        session['email'] = form.email.data
-        session['otp'] = otp
-
-        send_otp(form.email.data, otp)
-        return redirect(url_for('verify_otp'))
+        flash('Registration successful! Please check your email for verification.', 'success')
+        return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
+
+
+
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
@@ -111,15 +123,12 @@ def verify_otp():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-        if not user:
-            flash('Email not registered. Please register first.', 'danger')
-            return redirect(url_for('login'))
-
-        if not bcrypt.check_password_hash(user.password, form.password.data):
-            flash('Incorrect password. Please try again.', 'danger')
+        if not user or not bcrypt.check_password_hash(user.password, form.password.data):
+            flash('Invalid email or password.', 'danger')
             return redirect(url_for('login'))
 
         if not user.is_verified:
@@ -131,6 +140,8 @@ def login():
         return redirect(url_for('dashboard'))
 
     return render_template('login.html', form=form)
+
+
 
 
 @app.route('/dashboard')
