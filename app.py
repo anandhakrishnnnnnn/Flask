@@ -17,7 +17,7 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'anandhannn1122@gmail.com'  
-app.config['MAIL_PASSWORD'] = ''     
+app.config['MAIL_PASSWORD'] = 'wpzh udck iogx zskg'     
 
 csrf = CSRFProtect(app)
 db = SQLAlchemy(app)
