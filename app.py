@@ -79,7 +79,6 @@ def send_otp(email, otp):
 def home():
     return redirect(url_for('login'))
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -88,20 +87,34 @@ def register():
         password = form.password.data
 
         existing_user = User.query.filter_by(email=email).first()
+
         if existing_user:
-            flash('Email already exists. Please login.', 'warning')
-            return redirect(url_for('login'))
+            if existing_user.is_verified:
+                flash('Email already registered and verified. Please login.', 'info')
+                return redirect(url_for('login'))
+            else:
+                otp = generate_otp()
+                session['otp'] = otp
+                session['email'] = email
+                send_otp(email, otp)
+                flash('You are already registered but not verified. New OTP sent to your email.', 'warning')
+                return redirect(url_for('verify_otp'))
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-
         new_user = User(email=email, password=hashed_password, is_verified=False)
         db.session.add(new_user)
         db.session.commit()
 
-        flash('Registration successful! Please check your email for verification.', 'success')
-        return redirect(url_for('login'))
+        otp = generate_otp()
+        session['otp'] = otp
+        session['email'] = email
+        send_otp(email, otp)
+
+        flash('Registration successful! OTP sent to your email for verification.', 'success')
+        return redirect(url_for('verify_otp'))
 
     return render_template('register.html', form=form)
+
 
 
 
